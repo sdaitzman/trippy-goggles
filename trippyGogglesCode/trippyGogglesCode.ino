@@ -25,8 +25,11 @@ Servo leftServo;
 Servo rightServo;
 
 // servo starting position
-int leftPos = 40;
-int rightPos = 40;
+int leftPos, rightPos;
+
+// detach non-used servos at this time
+int detachServosAt;
+bool servosAttached;
 
 void setup() {
   delay(250); // so uploads don't fail as much
@@ -52,58 +55,83 @@ void setup() {
   rightServo.attach(rightServoPin);
   delay(100);
 
+  // get current position
+  leftPos = leftServo.read();
+  rightPos = rightServo.read();
+  Serial.println("leftPos: " + leftPos);
+  Serial.println("rightPos: " + rightPos);
+  delay(100);
+
   // go to initial position
   leftServo.write(leftPos);
   delay(100);
   rightServo.write(rightPos);
   delay(100);
+  Serial.println("Init finished");
 }
 
 void loop() {
-  
+
   leftUpButtonVal       = digitalRead(leftUpButtonPin);
   leftDownButtonVal     = digitalRead(leftDownButtonPin);
   rightUpButtonVal      = digitalRead(rightUpButtonPin);
   rightDownButtonVal    = digitalRead(rightDownButtonPin);
-  
+
   if (leftUpButtonVal == 0 | leftDownButtonVal == 0 || rightUpButtonVal == 0 || rightDownButtonVal == 0) {
+    
+    // detach servos in 1s
+    detachServosAt = millis() + 1000;
+    
+    // attach servos
+    rightServo.attach(rightServoPin);
+    leftServo.attach(leftServoPin);
+    servosAttached = true;
+    Serial.print("Servos attached because ");
+    
+    // turn on LED if buttons pressed
     digitalWrite(indicatorPin, HIGH);
+    
     if (leftUpButtonVal == 0) {
       leftPos++;
-      Serial.print("Left up button pressed. ");
+      Serial.print("the left up button was pressed. ");
     }
 
     if (leftDownButtonVal == 0) {
       leftPos--;
-      Serial.print("Left down button pressed. ");
+      Serial.print("the left down button was pressed. ");
     }
 
     if (rightUpButtonVal == 0) {
       rightPos++;
-      Serial.print("Right up button pressed. ");
+      Serial.print("the right up button was pressed. ");
     }
 
     if (rightDownButtonVal == 0) {
       rightPos--;
-      Serial.print("Right down button pressed. ");
+      Serial.print("the right down button was pressed. ");
     }
 
-    delay(30);
-    
     leftPos =  constrain(leftPos, servoMinPos, servoMaxPos);
     rightPos = constrain(rightPos, servoMinPos, servoMaxPos);
-    
+
     Serial.println("After constraining, leftPos \=  " + String(leftPos) + " and rightPos \= " + String(rightPos));
-    
+
     leftServo.write(leftPos);
     rightServo.write(rightPos);
-    
-    delay(30);
-    
+    delay(100);
+
   } else {
+    if (millis() >= detachServosAt & servosAttached == true) {
+      Serial.println("Detaching servos so they don't twitch"); // comment this out if your servos behave differently
+      leftPos = leftServo.read();
+      rightPos = rightServo.read();
+      rightServo.detach();
+      leftServo.detach();
+      servosAttached = false;
+    }
+    // turn LED off if buttons not pressed
     digitalWrite(indicatorPin, LOW);
   }
 }
-
 
 
